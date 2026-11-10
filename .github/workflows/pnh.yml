@@ -1,0 +1,78 @@
+name: Odswiez terminy PNH
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/pnh.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pobierz terminy siatkowki z PilkaNaHali.pl
+        run: |
+          mkdir -p data
+          python3 - <<'EOF'
+          import json, datetime, time, urllib.request, urllib.parse
+          API = "https://api.pilkanahali.pl/api/v3/client/activities"
+          DAYS = 21
+          LEVELS = {"free": "Dowolny", "beginners": "Rekreacyjny", "medium": "Średni",
+                    "medium_plus": "Średni plus", "intermediate": "Śr. zaawansowany", "advanced": "Zaawansowany"}
+          GENDERS = {"unisex": "Mieszane", "males": "Mężczyźni", "females": "Kobiety", "male": "Mężczyźni", "female": "Kobiety"}
+          today = datetime.date.today()
+          params = [("search", "true"), ("limit", "100"), ("sport_id[]", "2"), ("with_city[]", "Warszawa"),
+                    ("with_date_greater", today.isoformat()),
+                    ("with_date_less", (today + datetime.timedelta(days=DAYS)).isoformat()),
+                    ("order", "activities.date asc")]
+          rows, page = [], 0
+          while True:
+              q = urllib.parse.urlencode(params + [("page", str(page))])
+              req = urllib.request.Request(API + "?" + q, headers={"X-App-Version": "1.0.0", "Accept": "application/json"})
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  d = json.load(r)
+              batch = d.get("rows", []) if isinstance(d, dict) else d
+              rows += batch
+              total = int(d.get("total", len(rows))) if isinstance(d, dict) else len(rows)
+              page += 1
+              if not batch or len(rows) >= total or page > 30:
+                  break
+          days = {}
+          for r in rows:
+              loc = r.get("localization") or {}
+              if (r.get("sport") or {}).get("id") != 2 or r.get("canceled") or (loc.get("city") or "") != "Warszawa":
+                  continue
+              name, street = (loc.get("name") or "").strip(), (loc.get("street") or "").strip()
+              place = name + ", " + street if name and street and street not in name else (name or street)
+              taken, total_p = int(r.get("all_reserved_spots") or 0), int(r.get("max_players") or 0)
+              url = r.get("url") or ""
+              if url.startswith("/"):
+                  url = "https://pilkanahali.pl" + urllib.parse.quote(url, safe="/?=&+")
+              lv = r.get("lv") or "free"
+              days.setdefault(r["date"], []).append({
+                  "date": r["date"], "start": (r.get("start_at") or "")[:5], "end": (r.get("stop_at") or "")[:5] or None,
+                  "place": place, "level": LEVELS.get(lv, lv), "gender": GENDERS.get(r.get("gender") or "unisex", r.get("gender")),
+                  "price": float(r.get("price") or 0), "taken": taken, "total": total_p,
+                  "minPlayers": int(r.get("min_players") or 0), "coach": bool(r.get("coach")),
+                  "organizer": r.get("organizer_name") or "PilkaNaHali.pl", "url": url, "pnhId": r["id"]})
+          for gs in days.values():
+              gs.sort(key=lambda g: (g["start"], g["place"]))
+          n = sum(len(v) for v in days.values())
+          if n == 0:
+              raise SystemExit("Brak terminow z API - nie nadpisuje pliku")
+          with open("data/pnh.json", "w", encoding="utf8") as f:
+              json.dump({"synced": int(time.time() * 1000), "days": dict(sorted(days.items()))}, f, ensure_ascii=False, separators=(",", ":"))
+          print("terminy:", n, "dni:", len(days))
+          EOF
+      - name: Zapisz do repozytorium
+        run: |
+          git config user.name "pnh-sync"
+          git config user.email "pnh-sync@users.noreply.github.com"
+          git add data/pnh.json
+          git diff --cached --quiet || (git commit -m "Terminy PNH" && git push)
