@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Kiedy gramy? Siatkówka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body.locked nav.tabs,body.locked .weekbar,body.locked .who,body.locked section.panel{display:none!important}
+#gate{margin-top:24px}
+/* Layout: sticky header (kto + tydzień), trzy widoki tego samego tygodnia: moje godziny / ekipa / terminy PNH. Na telefonie zakładki na dole. */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --fg:#14213a; --muted:#5d6b82; --line:#d9dfe8;
+  --accent:#1f5fd1; --accent-ink:#ffffff; --accent-soft:#e4edfb; --ball:#f2b705;
+  --good:#1d8a4e; --good-bg:#e3f4ea; --warn:#a86a00; --warn-bg:#fdf1d8; --bad:#9aa4b4; --bad-bg:#eef1f5;
+  --heat0:#e9edf3; --heat:31,95,209;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1524; --surface:#162034; --fg:#e7ecf5; --muted:#93a0b8; --line:#2a3650;
+  --accent:#5b8ff0; --accent-ink:#0b1220; --accent-soft:#1c2b4a; --ball:#f5c84a;
+  --good:#5fd394; --good-bg:#16352a; --warn:#f0b54a; --warn-bg:#3a2d12; --bad:#6d7890; --bad-bg:#1c2639;
+  --heat0:#1e2940; --heat:91,143,240; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1524; --surface:#162034; --fg:#e7ecf5; --muted:#93a0b8; --line:#2a3650;
+  --accent:#5b8ff0; --accent-ink:#0b1220; --accent-soft:#1c2b4a; --ball:#f5c84a;
+  --good:#5fd394; --good-bg:#16352a; --warn:#f0b54a; --warn-bg:#3a2d12; --bad:#6d7890; --bad-bg:#1c2639;
+  --heat0:#1e2940; --heat:91,143,240; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main.wrap{padding-block:0 48px}
+select,input,button,textarea{font:inherit;color:inherit}
+select,input[type=text],input[type=number],input[type=date],input[type=time],input[type=url]{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0;max-width:100%}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 12px}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.ghost{background:transparent;border-color:transparent;color:var(--muted);padding:4px 8px}
+button:focus-visible,select:focus-visible,input:focus-visible,.cell:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+
+/* header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+header .wrap{padding-block:10px 0;display:flex;flex-direction:column;gap:8px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.01em;margin:0;white-space:nowrap}
+.ballmark{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 0 18%,transparent 19%),var(--ball);box-shadow:inset -3px -3px 0 rgba(0,0,0,.12);flex:none}
+.who{margin-left:auto;min-width:0;display:flex;align-items:center;gap:6px}
+.who select{max-width:150px}
+.weekbar{display:flex;align-items:center;gap:8px}
+.weekbar button{width:40px;height:36px;padding:0;font-size:18px;flex:none}
+.wlabel{flex:1;text-align:center;line-height:1.15}
+.wlabel b{display:block;font-family:var(--display);font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
+.wlabel span{font-size:12px;color:var(--muted)}
+nav.tabs{display:flex;gap:2px}
+nav.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:8px 12px;font-weight:600;color:var(--muted)}
+nav.tabs button[aria-selected=true]{color:var(--fg);border-bottom-color:var(--accent)}
+
+/* shared */
+section.panel{display:flex;flex-direction:column;gap:14px;padding-top:16px}
+h2{font-family:var(--display);font-weight:700;font-size:18px;margin:0;text-wrap:balance}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.notice{background:var(--warn-bg);border-radius:10px;padding:12px 14px;font-size:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.between{justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.empty{border:1px dashed var(--line);border-radius:12px;padding:20px;text-align:center;color:var(--muted)}
+.pill{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600;background:var(--bad-bg);color:var(--fg);white-space:nowrap}
+
+/* week grid */
+.grid{display:grid;grid-template-columns:42px repeat(7,minmax(0,1fr));gap:3px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.gh{font-family:var(--display);text-align:center;color:var(--muted);padding:2px 0 4px;border:0;background:none;border-radius:6px;line-height:1.1;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.gh b{display:block;font-size:17px;font-weight:800;color:var(--fg);letter-spacing:0;font-variant-numeric:tabular-nums}
+.gh.today b{color:var(--accent)}
+.gh.past{opacity:.4}
+.hr{font-size:11px;color:var(--muted);text-align:right;padding-right:6px;font-variant-numeric:tabular-nums;align-self:center}
+.cell{height:30px;border-radius:5px;background:var(--heat0);cursor:pointer}
+.cell.on{background:var(--accent)}
+.cell.past{opacity:.35;pointer-events:none}
+.heat .cell{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.heat .cell.hot{color:var(--accent-ink)}
+.heat .cell.full{box-shadow:inset 0 0 0 2px var(--ball)}
+.heat .cell.sel{outline:2px solid var(--fg);outline-offset:1px}
+.legend{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.legend i{width:14px;height:14px;border-radius:3px;display:inline-block}
+
+/* team */
+.windows{display:flex;flex-direction:column;gap:8px}
+.win{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;width:100%;padding:10px 12px;border-radius:12px}
+.win .n{font-family:var(--display);font-weight:800;font-size:20px;font-variant-numeric:tabular-nums;color:var(--good)}
+.win .t{font-weight:600}
+.win .s{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.win .go{font-size:13px;color:var(--accent);font-weight:600;white-space:nowrap}
+
+/* games */
+.fbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.fbox summary,.addbox summary{cursor:pointer;font-weight:600}
+.fbox summary .hint{font-weight:400;display:inline}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;padding-top:10px}
+.filters label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:500;min-width:0}
+.filters label>*,.formgrid label>*{width:100%}
+.chips{display:flex;gap:6px;flex-wrap:wrap;grid-column:1/-1;min-width:0}
+.chip{border-radius:999px;padding:5px 11px;font-size:13px;white-space:nowrap}
+.chip[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.daybar{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.daybar::-webkit-scrollbar{display:none}
+.daybar .chip small{opacity:.75;font-variant-numeric:tabular-nums}
+.games{display:flex;flex-direction:column;gap:8px}
+.game{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:start;background:var(--surface);border:1px solid var(--line);border-left-width:4px;border-radius:12px;padding:12px}
+.game.good{border-left-color:var(--good)} .game.warn{border-left-color:var(--warn)} .game.bad{border-left-color:var(--line)}
+.date{text-align:center;font-family:var(--display)}
+.date b{display:block;font-size:22px;line-height:1;font-weight:800;font-variant-numeric:tabular-nums}
+.date span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.gmain{min-width:0;display:flex;flex-direction:column;gap:5px}
+.gtitle{font-weight:600;overflow-wrap:anywhere}
+.gtitle .time{font-variant-numeric:tabular-nums}
+.meta{display:flex;gap:5px 10px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.who-free{font-size:13px;overflow-wrap:anywhere}
+.who-free b{color:var(--good)}
+.who-free .no{color:var(--muted)}
+.side{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.badge{font-family:var(--display);font-weight:800;font-size:20px;font-variant-numeric:tabular-nums;text-align:right;line-height:1}
+.badge small{display:block;font-family:var(--body);font-weight:500;font-size:11px;color:var(--muted)}
+.game.good .badge{color:var(--good)} .game.warn .badge{color:var(--warn)} .game.bad .badge{color:var(--bad)}
+a.join{display:inline-block;background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:600;font-size:13px;border-radius:8px;padding:5px 10px;white-space:nowrap}
+.addbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.addbox > div{display:flex;flex-direction:column;gap:10px;padding-top:10px}
+.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.formgrid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13px;z-index:20;max-width:90vw;text-align:center}
+@media (prefers-reduced-motion:no-preference){.cell{transition:background .12s}}
+
+@media (max-width:640px){
+  .brand h1{font-size:18px}
+  header .wrap{padding-block:8px}
+  nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--surface);border-top:1px solid var(--line);gap:0;padding:0 env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+  nav.tabs button{flex:1;border-bottom:0;border-top:3px solid transparent;padding:11px 4px 13px;font-size:13px}
+  nav.tabs button[aria-selected=true]{border-top-color:var(--accent);background:var(--accent-soft)}
+  main.wrap{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))}
+  .grid{grid-template-columns:34px repeat(7,minmax(0,1fr));gap:2px}
+  .cell{height:34px}
+  .hr{font-size:10px;padding-right:4px}
+  .game{grid-template-columns:42px minmax(0,1fr);gap:10px;padding:10px}
+  .side{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:8px}
+  .badge{text-align:left;font-size:17px}
+  .badge small{display:inline;margin-left:4px;font-size:12px}
+  .date b{font-size:20px}
+  .filters,.formgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .win{grid-template-columns:auto minmax(0,1fr)}
+  .win .go{grid-column:2}
+  .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+  input,select{font-size:16px}
+}
+</style>
+
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <span class="ballmark" aria-hidden="true"></span>
+      <h1>Kiedy gramy?</h1>
+      <div class="who">
+        <label for="me" class="hint">Jestem</label>
+        <select id="me"><option value="">— wybierz —</option></select>
+      </div>
+    </div>
+    <div class="weekbar">
+      <button id="wPrev" aria-label="Poprzedni tydzień">‹</button>
+      <div class="wlabel" aria-live="polite"><b id="wRange"></b><span id="wRel"></span></div>
+      <button id="wNext" aria-label="Następny tydzień">›</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="avail" aria-selected="true" id="tab-avail">Moje godziny</button>
+      <button role="tab" data-tab="team" aria-selected="false" id="tab-team">Ekipa</button>
+      <button role="tab" data-tab="games" aria-selected="false" id="tab-games">Terminy PNH</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="nodb" class="notice" hidden style="margin-top:16px">Nie mogę połączyć się ze wspólną bazą. Sprawdź internet i odśwież stronę.</div>
+  <div class="card" id="gate" hidden>
+    <h2>Hasło ekipy</h2>
+    <p class="hint" style="margin:6px 0 10px">Podaj hasło, które dostałeś od organizatora. Zapamiętam je na tym urządzeniu.</p>
+    <div class="row">
+      <input type="password" id="pw" aria-label="Hasło ekipy" autocomplete="current-password" style="flex:1">
+      <button id="pwBtn" class="primary">Wejdź</button>
+    </div>
+    <p class="hint" id="pwMsg" style="margin-top:8px"></p>
+  </div>
+
+  <!-- 1. moje godziny -->
+  <section class="panel" id="p-avail">
+    <div class="card" id="joinBox">
+      <h2>Kim jesteś?</h2>
+      <p class="hint" style="margin:6px 0 10px">Wybierz siebie z listy u góry albo dodaj się, jeśli jesteś tu pierwszy raz.</p>
+      <div class="row">
+        <input type="text" id="newName" placeholder="Twoje imię" maxlength="24" aria-label="Twoje imię" style="flex:1">
+        <button id="addPlayer" class="primary">Dodaj mnie</button>
+      </div>
+    </div>
+    <div id="availBody" hidden>
+      <div class="row between">
+        <h2 id="availTitle">Kiedy możesz grać?</h2>
+        <span class="hint" id="saveState"></span>
+      </div>
+      <p class="hint" style="margin:6px 0 10px">Stuknij godziny, w których możesz grać w tym tygodniu. Stuknięcie w dzień zaznacza cały wieczór (17–24).</p>
+      <div class="grid" id="grid"></div>
+      <div class="row" style="margin-top:12px">
+        <button id="copyPrev">Skopiuj poprzedni tydzień</button>
+        <button id="clearWeek">Wyczyść tydzień</button>
+        <button id="removeMe" class="ghost" style="margin-left:auto">Usuń mnie</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. ekipa -->
+  <section class="panel" id="p-team" hidden>
+    <div class="card" id="filledBox"></div>
+    <div>
+      <h2>Najlepsze wspólne okna</h2>
+      <p class="hint" style="margin:4px 0 10px">Co najmniej 2 godziny pod rząd, od największej liczby wolnych osób.</p>
+      <div class="windows" id="windows"></div>
+    </div>
+    <div>
+      <div class="row between" style="margin-bottom:8px">
+        <h2>Cały tydzień</h2>
+        <div class="legend"><i style="background:var(--heat0)"></i>nikt<i style="background:var(--accent)"></i>dużo<i style="background:var(--heat0);box-shadow:inset 0 0 0 2px var(--ball)"></i>wszyscy</div>
+      </div>
+      <div class="grid heat" id="heat"></div>
+      <div class="card" id="slotinfo" style="margin-top:10px;font-size:14px"></div>
+    </div>
+  </section>
+
+  <!-- 3. terminy -->
+  <section class="panel" id="p-games" hidden>
+    <details class="fbox" id="fbox"><summary>Filtry <span class="hint" id="fcount"></span></summary>
+      <div class="filters">
+        <label>Min. wolnych z nas<input type="number" id="fMin" min="1" max="20" value="6" inputmode="numeric"></label>
+        <label>Pokaż<select id="fOnly"><option value="match">tylko pasujące nam</option><option value="all">wszystkie terminy</option></select></label>
+        <label>Kolejność<select id="fSort"><option value="best">najwięcej z nas wolnych</option><option value="time">po dacie i godzinie</option></select></label>
+        <label>Maks. cena (zł)<input type="number" id="fPrice" min="0" step="1" placeholder="dowolna" inputmode="numeric"></label>
+        <label>Miejsca na PNH<select id="fSpots"><option value="free" selected>są wolne miejsca</option><option value="any">pokaż też pełne</option><option value="fit">zmieścimy się wszyscy wolni</option></select></label>
+        <label>Płeć<select id="fGender"><option value="">dowolna</option><option>Mieszane</option><option>Mężczyźni</option><option>Kobiety</option></select></label>
+        <label>Trener<select id="fCoach"><option value="">wszystkie</option><option value="no">bez trenera (gra)</option><option value="yes">z trenerem</option></select></label>
+        <label>Szukaj miejsca<input type="text" id="fPlace" placeholder="np. Hoża"></label>
+        <div class="chips" id="levelChips" role="group" aria-label="Poziom"></div>
+      </div>
+    </details>
+    <div class="daybar" id="daybar"></div>
+    <p class="hint" id="syncInfo"></p>
+    <div class="games" id="games"><div class="empty">Wczytuję terminy z PNH…</div></div>
+    <button id="moreBtn" hidden>Pokaż więcej</button>
+
+    <details class="addbox">
+      <summary>Dodaj własny termin spoza PNH</summary>
+      <div>
+        <div class="formgrid">
+          <label>Data<input type="date" id="gDate"></label>
+          <label>Od<input type="time" id="gStart" value="20:00"></label>
+          <label>Do<input type="time" id="gEnd" value="22:00"></label>
+          <label>Miejsce<input type="text" id="gPlace" placeholder="np. hala na Hożej"></label>
+          <label>Poziom<select id="gLevel"></select></label>
+          <label>Cena (zł)<input type="number" id="gPrice" step="0.5" min="0" inputmode="decimal"></label>
+          <label style="grid-column:1/-1">Link<input type="url" id="gUrl" placeholder="https://..."></label>
+        </div>
+        <div class="row"><button id="addGame" class="primary">Dodaj termin</button></div>
+      </div>
+    </details>
+  </section>
+</main>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(function(){
+const DAYS=["Pn","Wt","Śr","Cz","Pt","Sb","Nd"];
+const DAYS_LONG=["poniedziałek","wtorek","środa","czwartek","piątek","sobota","niedziela"];
+const HOURS=[];for(let h=8;h<=23;h++)HOURS.push(h);
+const EVENING=[17,18,19,20,21,22,23];
+const LEVELS=["Rekreacyjny","Średni","Średni plus","Śr. zaawansowany","Zaawansowany","Dowolny"];
+const REL=["ten tydzień","przyszły tydzień","za 2 tygodnie","za 3 tygodnie"];
+const MAXW=REL.length-1;
+
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const parse=s=>new Date(s+"T12:00:00");
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const monday=d=>{const x=new Date(d);x.setHours(12,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x};
+const dow=s=>(parse(s).getDay()+6)%7;                       // 0 = poniedziałek
+const toMin=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||"");return m?(+m[1])*60+(+m[2]):null};
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const slug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/ł/g,"l").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)||"x";
+const shortDate=s=>{const d=parse(s);return DAYS[dow(s)]+" "+d.getDate()+"."+pad(d.getMonth()+1)};
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+const S={players:{},pnh:[],pnhSynced:0,games:[],me:store.get("siatka.me")||null,db:null,
+  tab:"avail",week:0,day:"",win:null,sel:null,levels:new Set(),shown:40};
+let dirty=0,saveTimer=null;
+
+try{const f=JSON.parse(store.get("siatka.filters")||"{}");
+  ["fMin","fPrice","fSpots","fGender","fCoach","fOnly","fSort"].forEach(id=>{if(f[id]!=null&&f[id]!=="")$(id).value=f[id]});
+  (f.levels||[]).forEach(l=>{if(LEVELS.includes(l))S.levels.add(l)});}catch(e){}
+
+function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2400)}
+function today(){return iso(new Date())}
+function weekDates(w){const m=addDays(monday(new Date()),7*(w==null?S.week:w));return Array.from({length:7},(_,i)=>iso(addDays(m,i)))}
+function playerList(){return Object.entries(S.players).map(([id,p])=>({id,...p})).sort((a,b)=>a.name.localeCompare(b.name,"pl"))}
+function me(){return S.me&&S.players[S.me]?S.players[S.me]:null}
+function isFree(p,date,h){const a=p.days[date];return !!a&&a.indexOf(h)>=0}
+function hasWeek(p,dates){return dates.some(d=>p.days[d]&&p.days[d].length)}
+
+/* ---------- zakładki i tydzień ---------- */
+function setTab(t){S.tab=t;document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab===t));
+  ["avail","team","games"].forEach(k=>$("p-"+k).hidden=k!==t);render();window.scrollTo(0,0)}
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
+function setWeek(w){S.week=Math.max(0,Math.min(MAXW,w));S.day="";S.win=null;S.sel=null;S.shown=40;render()}
+$("wPrev").addEventListener("click",()=>setWeek(S.week-1));
+$("wNext").addEventListener("click",()=>setWeek(S.week+1));
+function renderWeek(){const d=weekDates(),a=parse(d[0]),b=parse(d[6]);
+  const mo=x=>x.toLocaleDateString("pl-PL",{month:"short"}).replace(".","");
+  $("wRange").textContent=a.getMonth()===b.getMonth()?`${a.getDate()}–${b.getDate()} ${mo(b)}`:`${a.getDate()} ${mo(a)} – ${b.getDate()} ${mo(b)}`;
+  $("wRel").textContent=REL[S.week];$("wPrev").disabled=S.week===0;$("wNext").disabled=S.week===MAXW}
+
+/* ---------- kto ---------- */
+$("me").addEventListener("change",e=>{S.me=e.target.value||null;store.set("siatka.me",S.me||"");dirty=0;render()});
+$("addPlayer").addEventListener("click",addPlayer);
+$("newName").addEventListener("keydown",e=>{if(e.key==="Enter")addPlayer()});
+async function addPlayer(){
+  const name=$("newName").value.trim();if(!name){$("newName").focus();return}
+  if(!S.db){toast("Brak połączenia z bazą");return}
+  const existing=playerList().find(p=>p.name.toLowerCase()===name.toLowerCase());
+  let id=existing?existing.id:slug(name);
+  if(!existing){if(S.players[id])id+="-"+Math.random().toString(36).slice(2,5);
+    try{await S.db.doc("players/"+id).set({name,days:{},updated:Date.now()})}
+    catch(e){toast("Nie udało się zapisać. Spróbuj jeszcze raz.");return}
+    S.players[id]={name,days:{}}}
+  S.me=id;store.set("siatka.me",id);$("newName").value="";render();toast("Cześć, "+S.players[id].name+"!")}
+$("removeMe").addEventListener("click",async e=>{const b=e.currentTarget;if(!me()||!S.db)return;
+  if(b.dataset.armed!=="1"){b.dataset.armed="1";b.textContent="Na pewno usunąć?";setTimeout(()=>{b.dataset.armed="";b.textContent="Usuń mnie"},3000);return}
+  b.dataset.armed="";b.textContent="Usuń mnie";clearTimeout(saveTimer);saveTimer=null;dirty=0;
+  try{await S.db.doc("players/"+S.me).delete();delete S.players[S.me];S.me=null;store.set("siatka.me","");render();toast("Usunięto z listy")}
+  catch(err){toast("Nie udało się usunąć")}});
+
+/* ---------- siatka tygodnia ---------- */
+function buildGrid(el,heat){el.innerHTML="";el.appendChild(document.createElement("div"));
+  for(let i=0;i<7;i++){const h=document.createElement(heat?"div":"button");h.className="gh";h.dataset.i=i;if(!heat)h.type="button";el.appendChild(h)}
+  for(const hr of HOURS){const l=document.createElement("div");l.className="hr";l.textContent=hr+":00";el.appendChild(l);
+    for(let i=0;i<7;i++){const c=document.createElement("div");c.className="cell";c.dataset.i=i;c.dataset.h=hr;c.setAttribute("role","button");c.tabIndex=0;el.appendChild(c)}}}
+buildGrid($("grid"),false);buildGrid($("heat"),true);
+function paintHeaders(el,dates){const t=today();el.querySelectorAll(".gh").forEach(h=>{const d=dates[+h.dataset.i];
+  h.innerHTML=DAYS[+h.dataset.i]+"<b>"+parse(d).getDate()+"</b>";h.classList.toggle("today",d===t);h.classList.toggle("past",d<t);
+  if(h.tagName==="BUTTON"){h.disabled=d<t;h.setAttribute("aria-label","Zaznacz wieczór: "+DAYS_LONG[+h.dataset.i]+" "+parse(d).getDate())}})}
+
+function edit(fn){const p=me();if(!p)return;const days=JSON.parse(JSON.stringify(p.days));fn(days);
+  for(const k in days){days[k]=[...new Set(days[k])].sort((a,b)=>a-b);if(!days[k].length)delete days[k]}
+  S.players[S.me]={...p,days};dirty++;$("saveState").textContent="Zapisuję…";clearTimeout(saveTimer);saveTimer=setTimeout(saveMine,600)}
+async function saveMine(){saveTimer=null;const p=me();if(!p||!S.db)return;const mark=dirty,id=S.me;
+  const cutoff=iso(addDays(new Date(),-14)),days={};for(const k in p.days)if(k>=cutoff&&p.days[k].length)days[k]=p.days[k];
+  try{await S.db.doc("players/"+id).set({name:p.name,days,updated:Date.now()});
+    if(dirty===mark){dirty=0;$("saveState").textContent="Zapisane"}}
+  catch(e){$("saveState").textContent="Nie zapisano. Zmień coś, żeby spróbować ponownie."}}
+function setCell(c,on){const date=weekDates()[+c.dataset.i],h=+c.dataset.h;if(date<today())return;
+  edit(days=>{const a=new Set(days[date]||[]);on?a.add(h):a.delete(h);days[date]=[...a]});
+  c.classList.toggle("on",on);c.setAttribute("aria-pressed",on)}
+
+const grid=$("grid");let painting=null,mouseDown=false;
+// Mysz: przeciąganie maluje. Dotyk: zwykłe stuknięcie, żeby przewijanie i powiększanie strony działało normalnie.
+grid.addEventListener("pointerdown",e=>{if(e.pointerType!=="mouse"||e.button!==0)return;const c=e.target.closest(".cell");if(!c||!me())return;
+  e.preventDefault();mouseDown=true;painting=!c.classList.contains("on");setCell(c,painting)});
+grid.addEventListener("pointerover",e=>{if(painting===null)return;const c=e.target.closest(".cell");if(c&&!c.classList.contains("past"))setCell(c,painting)});
+window.addEventListener("pointerup",()=>{painting=null;setTimeout(()=>{mouseDown=false},80)});
+grid.addEventListener("click",e=>{if(mouseDown){mouseDown=false;if(e.target.closest(".cell"))return}
+  const c=e.target.closest(".cell");if(c&&me()){setCell(c,!c.classList.contains("on"));return}
+  const h=e.target.closest("button.gh");if(h&&me())toggleEvening(+h.dataset.i)});
+grid.addEventListener("keydown",e=>{const c=e.target.closest(".cell");if(c&&me()&&(e.key===" "||e.key==="Enter")){e.preventDefault();setCell(c,!c.classList.contains("on"))}});
+function toggleEvening(i){const p=me(),date=weekDates()[i];if(!p||date<today())return;const allOn=EVENING.every(h=>isFree(p,date,h));
+  edit(days=>{const a=new Set(days[date]||[]);EVENING.forEach(h=>allOn?a.delete(h):a.add(h));days[date]=[...a]});renderAvail()}
+$("clearWeek").addEventListener("click",()=>{const dates=weekDates(),t=today();edit(days=>dates.forEach(d=>{if(d>=t)delete days[d]}));renderAvail()});
+$("copyPrev").addEventListener("click",()=>{const p=me();if(!p)return;const dates=weekDates(),t=today();
+  edit(days=>dates.forEach(d=>{if(d<t)return;const src=p.days[iso(addDays(parse(d),-7))];if(src&&src.length)days[d]=src.slice();else delete days[d]}));
+  renderAvail();toast("Skopiowano godziny z poprzedniego tygodnia")});
+
+function renderAvail(){const p=me(),dates=weekDates(),t=today();
+  $("joinBox").hidden=!!p;$("availBody").hidden=!p;if(!p)return;
+  $("availTitle").textContent=p.name+", kiedy możesz grać?";
+  paintHeaders(grid,dates);
+  grid.querySelectorAll(".cell").forEach(c=>{const d=dates[+c.dataset.i],on=isFree(p,d,+c.dataset.h);
+    c.classList.toggle("on",on);c.classList.toggle("past",d<t);c.setAttribute("aria-pressed",on);c.tabIndex=d<t?-1:0;
+    c.setAttribute("aria-label",DAYS_LONG[+c.dataset.i]+" "+c.dataset.h+":00")});
+  const prev=dates.map(d=>iso(addDays(parse(d),-7)));$("copyPrev").disabled=!hasWeek(p,prev);
+  $("clearWeek").disabled=!hasWeek(p,dates)}
+
+/* ---------- ekipa ---------- */
+function bestWindows(dates,ps){const out=[],t=today(),nowH=new Date().getHours(),need=Math.min(2,ps.length);
+  dates.forEach(date=>{if(date<t)return;let cur=null;
+    for(let h=HOURS[0];h<HOURS[HOURS.length-1];h++){
+      const ids=(date===t&&h<=nowH)?[]:ps.filter(p=>isFree(p,date,h)&&isFree(p,date,h+1)).map(p=>p.id),key=ids.join("|");
+      if(cur&&cur.key===key&&ids.length)cur.end=h+2;else{if(cur&&cur.n)out.push(cur);cur={date,start:h,end:h+2,key,ids,n:ids.length}}}
+    if(cur&&cur.n)out.push(cur)});
+  return out.filter(w=>w.n>=need&&w.n>0).sort((a,b)=>b.n-a.n||(b.end-b.start)-(a.end-a.start)||(a.date+pad(a.start)).localeCompare(b.date+pad(b.start))).slice(0,5)}
+function inWindow(g,w){const s=toMin(g.start),e=gameEnd(g);return g.date===w.date&&s!=null&&s>=w.start*60&&e<=w.end*60}
+function renderTeam(){const ps=playerList(),n=ps.length,dates=weekDates(),t=today();
+  const filled=ps.filter(p=>hasWeek(p,dates)),missing=ps.filter(p=>!hasWeek(p,dates));
+  $("filledBox").innerHTML=!n?`<b>Nikogo jeszcze nie ma.</b> Dodaj się w zakładce „Moje godziny” i wyślij link reszcie.`:
+    `<b>Godziny na ten tydzień wpisało ${filled.length} z ${n}.</b><div class="hint" style="margin-top:4px">${filled.length?"Są: "+esc(filled.map(p=>p.name).join(", "))+". ":""}${missing.length?"Czekamy na: "+esc(missing.map(p=>p.name).join(", "))+".":"Komplet."}</div>`;
+  const wins=bestWindows(dates,ps),upcoming=allGames().filter(g=>!isPast(g));
+  $("windows").innerHTML=wins.length?wins.map((w,i)=>{const names=ps.filter(p=>w.ids.includes(p.id)).map(p=>p.name),out=ps.filter(p=>!w.ids.includes(p.id)).map(p=>p.name);
+      const k=upcoming.filter(g=>inWindow(g,w)).length;
+      return `<button class="win" data-w="${i}"><span class="n">${w.n}/${n}</span><span><span class="t">${shortDate(w.date)} · ${w.start}:00–${w.end===24?"24":w.end}:00</span><br><span class="s">${esc(names.join(", "))}${out.length?" · bez: "+esc(out.join(", ")):""}</span></span><span class="go">${k?`Terminy PNH: ${k} ›`:"brak terminów PNH"}</span></button>`}).join("")
+    :`<div class="empty">${n<2?"Wspólne okna pojawią się, gdy godziny wpiszą co najmniej 2 osoby.":"W tym tygodniu nie ma jeszcze 2 godzin pod rząd, w których mogą co najmniej 2 osoby."}</div>`;
+  renderTeam.wins=wins;
+  const heat=$("heat");paintHeaders(heat,dates);
+  heat.querySelectorAll(".cell").forEach(c=>{const d=dates[+c.dataset.i],h=+c.dataset.h,k=ps.filter(p=>isFree(p,d,h)).length,r=n?k/n:0;
+    c.style.background=k?`rgba(var(--heat),${(0.2+0.8*r).toFixed(2)})`:"";c.textContent=k||"";
+    c.classList.toggle("hot",r>0.5);c.classList.toggle("full",n>1&&k===n);c.classList.toggle("past",d<t);
+    c.classList.toggle("sel",!!S.sel&&S.sel[0]===d&&S.sel[1]===h);
+    c.setAttribute("aria-label",DAYS_LONG[+c.dataset.i]+" "+h+":00, wolnych: "+k)});
+  const box=$("slotinfo");
+  if(!S.sel){box.textContent="Stuknij w godzinę, żeby zobaczyć, kto wtedy może.";return}
+  const [d,h]=S.sel,yes=ps.filter(p=>isFree(p,d,h)).map(p=>p.name),no=ps.filter(p=>!isFree(p,d,h)).map(p=>p.name);
+  box.innerHTML=`<b>${shortDate(d)}, ${h}:00–${h+1}:00</b> · ${yes.length}/${n} wolnych<br><span style="color:var(--good)">Mogą:</span> ${esc(yes.join(", ")||"nikt")}<br><span class="hint">Nie mogą: ${esc(no.join(", ")||"–")}</span>`}
+function pickSlot(c){S.sel=[weekDates()[+c.dataset.i],+c.dataset.h];renderTeam()}
+$("heat").addEventListener("click",e=>{const c=e.target.closest(".cell");if(c)pickSlot(c)});
+$("heat").addEventListener("keydown",e=>{const c=e.target.closest(".cell");if(c&&(e.key===" "||e.key==="Enter")){e.preventDefault();pickSlot(c)}});
+$("windows").addEventListener("click",e=>{const b=e.target.closest("[data-w]");if(!b)return;const w=renderTeam.wins[+b.dataset.w];if(!w)return;
+  S.win=w;S.day=w.date;S.shown=40;setTab("games")});
+
+/* ---------- terminy ---------- */
+function allGames(){return S.games.concat(S.pnh)}
+function gameEnd(g){const s=toMin(g.start);let e=toMin(g.end);if(e==null||e<=s)e=s+120;return e}
+function isPast(g){const t=today();if(g.date<t)return true;if(g.date>t)return false;const n=new Date();return toMin(g.start)<=n.getHours()*60+n.getMinutes()}
+function gameFree(g,ps){const s=toMin(g.start),e=gameEnd(g),need=[];for(let h=Math.floor(s/60);h*60<e;h++)need.push(h);
+  const yes=[],no=[];ps.forEach(p=>(need.every(h=>isFree(p,g.date,h))?yes:no).push(p.name));return{yes,no}}
+
+LEVELS.forEach(l=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=l;b.dataset.l=l;
+  b.addEventListener("click",()=>{S.levels.has(l)?S.levels.delete(l):S.levels.add(l);S.shown=40;saveFilters();renderGames()});$("levelChips").appendChild(b);
+  if(l!=="Dowolny"){const o=document.createElement("option");o.value=l;o.textContent=l;$("gLevel").appendChild(o)}});
+$("gLevel").value="Średni";
+["fMin","fPrice","fPlace","fSpots","fGender","fCoach","fOnly","fSort"].forEach(id=>$(id).addEventListener("input",()=>{S.shown=40;saveFilters();renderGames()}));
+$("moreBtn").addEventListener("click",()=>{S.shown+=40;renderGames()});
+function saveFilters(){const f={levels:[...S.levels]};["fMin","fPrice","fSpots","fGender","fCoach","fOnly","fSort"].forEach(id=>f[id]=$(id).value);store.set("siatka.filters",JSON.stringify(f))}
+try{if(window.matchMedia("(min-width:641px)").matches)$("fbox").open=true}catch(e){}
+$("daybar").addEventListener("click",e=>{const b=e.target.closest("[data-day]");if(!b)return;S.day=b.dataset.day;S.win=null;S.shown=40;renderGames()});
+
+function renderGames(){
+  document.querySelectorAll("#levelChips .chip").forEach(b=>b.setAttribute("aria-pressed",S.levels.has(b.dataset.l)));
+  const ps=playerList(),dates=weekDates(),inWeek=new Set(dates);
+  const anyFilled=ps.some(p=>hasWeek(p,dates));
+  const minSet=Math.max(1,+$("fMin").value||1),min=Math.max(1,Math.min(minSet,ps.length||1));
+  const maxP=$("fPrice").value===""?null:+$("fPrice").value,q=$("fPlace").value.trim().toLowerCase(),spots=$("fSpots").value;
+  const gen=$("fGender").value,coach=$("fCoach").value,only=$("fOnly").value==="match"&&anyFilled&&!S.win,best=$("fSort").value==="best"&&anyFilled;
+  const act=S.levels.size+(maxP!==null)+(!!q)+(spots!=="any")+(!!gen)+(!!coach);
+  $("fcount").textContent=`· min. ${min} z nas${act?` · inne: ${act}`:""}`;
+  const all=allGames();
+  const base=all.filter(g=>inWeek.has(g.date)&&!isPast(g)&&toMin(g.start)!=null)
+    .filter(g=>!S.levels.size||S.levels.has(g.level))
+    .filter(g=>!gen||!g.gender||g.gender===gen)
+    .filter(g=>!coach||(coach==="yes")===!!g.coach)
+    .filter(g=>maxP===null||g.price==null||g.price<=maxP)
+    .filter(g=>!q||(g.place||"").toLowerCase().includes(q))
+    .map(g=>({g,f:gameFree(g,ps)}))
+    .filter(({g,f})=>{if(spots==="any"||g.total==null||g.taken==null)return true;const left=g.total-g.taken;return spots==="free"?left>0:left>=Math.max(1,f.yes.length)})
+    .filter(({f})=>!only||f.yes.length>=min);
+  // dni
+  const cnt={};base.forEach(({g})=>cnt[g.date]=(cnt[g.date]||0)+1);
+  $("daybar").innerHTML=`<button class="chip" data-day="" aria-pressed="${!S.day}">Cały tydzień <small>${base.length}</small></button>`+
+    dates.filter(d=>d>=today()).map(d=>`<button class="chip" data-day="${d}" aria-pressed="${S.day===d}">${shortDate(d)} <small>${cnt[d]||0}</small></button>`).join("");
+  let list=base.filter(({g})=>!S.day||g.date===S.day);
+  if(S.win)list=list.filter(({g})=>inWindow(g,S.win));
+  const chrono=(a,b)=>(a.g.date+a.g.start).localeCompare(b.g.date+b.g.start)||(a.g.place||"").localeCompare(b.g.place||"");
+  list.sort(best?(a,b)=>b.f.yes.length-a.f.yes.length||chrono(a,b):chrono);
+  // opis
+  const sync=S.pnhSynced?`Dane z PNH z ${new Date(S.pnhSynced).toLocaleString("pl-PL",{weekday:"short",day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"})}.`:"";
+  $("syncInfo").innerHTML=(S.win?`<b>Okno ${shortDate(S.win.date)} ${S.win.start}:00–${S.win.end}:00.</b> <button class="ghost" id="clearWin" style="padding:0 4px;text-decoration:underline">Pokaż cały dzień</button><br>`:"")+
+    (!anyFilled&&ps.length?"Nikt nie wpisał jeszcze godzin na ten tydzień, więc pokazuję wszystkie terminy. ":"")+`Terminów: ${list.length}. ${sync}`;
+  const cw=$("clearWin");if(cw)cw.addEventListener("click",()=>{S.win=null;renderGames()});
+  $("moreBtn").hidden=list.length<=S.shown;
+  const box=$("games");
+  if(!all.length){box.innerHTML=`<div class="empty">${S.db?"Wczytuję terminy z PNH…":"Brak połączenia z bazą."}</div>`;return}
+  if(!list.length){const hasWeekData=all.some(g=>inWeek.has(g.date));
+    box.innerHTML=`<div class="empty">${!hasWeekData?"PNH nie ma jeszcze terminów na ten tydzień albo dane nie zostały odświeżone.":only?`Nie ma terminu, w którym wolnych jest co najmniej ${min} z was. Zmniejsz „Min. wolnych z nas” w filtrach albo przełącz na „wszystkie terminy”.`:"Żaden termin nie pasuje do filtrów."}</div>`;return}
+  box.innerHTML=list.slice(0,S.shown).map(({g,f})=>{const k=f.yes.length,cls=!anyFilled?"bad":k>=min?"good":k>=min-1&&k>0?"warn":"bad";
+    const d=parse(g.date),left=(g.total!=null&&g.taken!=null)?g.total-g.taken:null,link=/^https?:\/\//.test(g.url||"")?g.url:"";
+    return `<article class="game ${cls}">
+      <div class="date"><span>${DAYS[dow(g.date)]}</span><b>${d.getDate()}</b><span>${d.toLocaleDateString("pl-PL",{month:"short"}).replace(".","")}</span></div>
+      <div class="gmain">
+        <div class="gtitle"><span class="time">${esc(g.start)}${g.end?"–"+esc(g.end):""}</span> · ${esc(g.place||"miejsce nieznane")}</div>
+        <div class="meta">${g.level?`<span class="pill">${esc(g.level)}</span>`:""}${g.gender&&g.gender!=="Mieszane"?`<span class="pill">${esc(g.gender)}</span>`:""}${g.coach?`<span class="pill">z trenerem</span>`:""}${g.price!=null?`<span>${g.price===0?"darmowe":Number(g.price).toFixed(2).replace(".",",")+" zł"}</span>`:""}${left!=null?`<span>${left>0?`${left} wolnych miejsc (${g.taken}/${g.total})`:`brak miejsc (${g.taken}/${g.total})`}</span>`:""}</div>
+        ${ps.length?`<div class="who-free"><b>Mogą:</b> ${esc(f.yes.join(", ")||"nikt")}${f.no.length?` <span class="no">· nie: ${esc(f.no.join(", "))}</span>`:""}</div>`:""}
+      </div>
+      <div class="side"><div class="badge">${k}/${ps.length}<small>z nas wolnych</small></div>${link?`<a class="join" href="${esc(link)}" target="_blank" rel="noopener">${g.pnhId?"Zapisz się na PNH":"Otwórz link"}</a>`:""}${g.pnhId?"":`<button class="ghost" data-del="${esc(g.id)}">Usuń</button>`}</div>
+    </article>`}).join("")}
+$("games").addEventListener("click",async e=>{const b=e.target.closest("[data-del]");if(!b||!S.db)return;
+  if(b.dataset.armed!=="1"){b.dataset.armed="1";b.textContent="Na pewno?";setTimeout(()=>{b.dataset.armed="";b.textContent="Usuń"},3000);return}
+  try{await S.db.doc("games/"+b.dataset.del).delete();toast("Usunięto termin")}catch(err){toast("Nie udało się usunąć")}});
+$("addGame").addEventListener("click",async()=>{if(!S.db){toast("Brak połączenia z bazą");return}const date=$("gDate").value,start=$("gStart").value;
+  if(!date||!start){toast("Podaj datę i godzinę");return}
+  const g={date,start,end:$("gEnd").value||null,place:$("gPlace").value.trim(),level:$("gLevel").value,price:$("gPrice").value===""?null:+$("gPrice").value,url:$("gUrl").value.trim(),added:Date.now()};
+  try{await S.db.doc("games/"+slug(date+"-"+start+"-"+(g.place||"x"))).set(g);toast("Dodano termin");["gPlace","gPrice","gUrl"].forEach(id=>$(id).value="")}
+  catch(e){toast("Nie udało się dodać terminu")}});
+
+/* ---------- render ---------- */
+function render(){
+  const ps=playerList(),sel=$("me");
+  sel.innerHTML=`<option value="">— wybierz —</option>`+ps.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
+  sel.value=me()?S.me:"";
+  renderWeek();
+  if(S.tab==="avail")renderAvail();else if(S.tab==="team")renderTeam();else renderGames()}
+render();
+
+/* ---------- baza: Supabase (godziny, własne terminy) + data/pnh.json (terminy PNH) ---------- */
+const CFG={url:"https://pvrfhzphcuwyehboeipn.supabase.co",key:"sb_publishable_xzFGwmIqSxXPO4Mc2GAwBQ_GJl94YrI"};
+function makeDb(pw){
+  const L={players:[],games:[],pnh:[]};let state={players:{},games:{}},pnhDocs={},last="",writes=0;
+  async function rpc(fn,body){const h={"Content-Type":"application/json",apikey:CFG.key};if(CFG.key.startsWith("eyJ"))h.Authorization="Bearer "+CFG.key;
+    const r=await fetch(CFG.url.replace(/\/+$/,"")+"/rest/v1/rpc/"+fn,{method:"POST",headers:h,body:JSON.stringify(body)});
+    if(!r.ok){let m="";try{m=(await r.json()).message||""}catch(e){}const err=new Error(m||("http_"+r.status));err.code=m==="bad_password"?"bad_password":"unavailable";throw err}
+    const t=await r.text();return t?JSON.parse(t):null}
+  const snap=o=>{const docs=Object.entries(o).map(([id,v])=>({id,exists:true,data:()=>v}));return{docs,size:docs.length,empty:!docs.length}};
+  const src=k=>k==="pnh"?pnhDocs:state[k];
+  const emit=k=>L[k].forEach(f=>f(snap(src(k))));
+  async function pull(){const w=writes,rows=await rpc("siatka_get",{pw})||[];if(w!==writes)return;       // w trakcie był zapis: wynik może być stary
+    const sig=JSON.stringify(rows);if(sig===last)return;last=sig;
+    const next={players:{},games:{}};rows.forEach(r=>{if(next[r.kind])next[r.kind][r.id]=r.data});state=next;emit("players");emit("games")}
+  async function pullPnh(){try{const r=await fetch("data/pnh.json?t="+Math.floor(Date.now()/600000),{cache:"no-store"});if(!r.ok)return;const j=await r.json();
+    const next={};for(const d in (j.days||{}))next[d]={date:d,games:j.days[d],synced:j.synced};pnhDocs=next;emit("pnh")}catch(e){}}
+  const tick=()=>{if(!document.hidden)pull().catch(()=>{})};
+  return{pull,pullPnh,
+    start(){setInterval(tick,15000);document.addEventListener("visibilitychange",tick);setInterval(pullPnh,30*60000)},
+    collection(k){return{onSnapshot(cb){L[k].push(cb);cb(snap(src(k)));return()=>{}}}},
+    doc(path){const [k,id]=path.split("/");return{
+      async set(v){writes++;try{await rpc("siatka_put",{pw,p_kind:k,p_id:id,p_data:v})}finally{writes++}state[k]={...state[k],[id]:v};last="";emit(k)},
+      async delete(){writes++;try{await rpc("siatka_del",{pw,p_kind:k,p_id:id})}finally{writes++}const c={...state[k]};delete c[id];state[k]=c;last="";emit(k)}}}}}
+async function connect(){
+  if(!/^https:\/\//.test(CFG.url)||!CFG.key||CFG.key.startsWith("__"))return null;
+  document.body.classList.add("locked");
+  let pw=store.get("siatka.pw")||"";
+  for(;;){
+    if(pw){const db=makeDb(pw);
+      try{await db.pull();store.set("siatka.pw",pw);$("gate").hidden=true;document.body.classList.remove("locked");db.pullPnh();db.start();return db}
+      catch(e){$("pwMsg").textContent=e.code==="bad_password"?"Złe hasło. Spróbuj jeszcze raz.":"Nie mogę połączyć się z bazą. Sprawdź internet i spróbuj ponownie.";
+        if(e.code==="bad_password")store.set("siatka.pw","")}}
+    $("gate").hidden=false;
+    pw=await new Promise(res=>{const go=()=>{const v=$("pw").value.trim();if(v)res(v)};$("pwBtn").onclick=go;$("pw").onkeydown=e=>{if(e.key==="Enter")go()}});
+    $("pwMsg").textContent="Sprawdzam…"}}
+function normPlayer(x){const days={};
+  if(x.days&&typeof x.days==="object"){for(const k in x.days)if(/^\d{4}-\d{2}-\d{2}$/.test(k)&&Array.isArray(x.days[k]))days[k]=x.days[k].filter(Number.isInteger)}
+  else if(x.avail&&typeof x.avail==="object"){const w=weekDates(0);          // stary zapis: wzór tygodnia -> bieżący tydzień
+    for(let i=1;i<=7;i++)if(Array.isArray(x.avail[i])&&x.avail[i].length)days[w[i-1]]=x.avail[i].filter(Number.isInteger)}
+  return{name:String(x.name).slice(0,40),days}}
+(async()=>{
+  const db=await connect();
+  if(!db){$("nodb").hidden=false;render();return}
+  S.db=db;
+  db.collection("players").onSnapshot(snap=>{const next={};snap.docs.forEach(d=>{const x=d.data();if(x&&x.name)next[d.id]=normPlayer(x)});
+      if(dirty&&S.me&&S.players[S.me])next[S.me]=S.players[S.me];          // nie nadpisuj niezapisanych zmian
+      S.players=next;if(painting===null)render()},
+    ()=>{$("nodb").hidden=false});
+  db.collection("pnh").onSnapshot(snap=>{let ts=0;const out=[];snap.docs.forEach(d=>{const x=d.data()||{};ts=Math.max(ts,x.synced||0);
+      (x.games||[]).forEach(g=>out.push({...g,id:"pnh-"+g.pnhId}))});
+    S.pnh=out;S.pnhSynced=ts;if(S.tab!=="avail")render()},()=>{});
+  db.collection("games").onSnapshot(snap=>{S.games=snap.docs.map(d=>({...d.data(),id:d.id}));if(S.tab!=="avail")render()},()=>{});
+})();
+})();
+</script>
+</body>
+</html>
