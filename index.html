@@ -54,7 +54,18 @@ header .wrap{padding-block:10px 0;display:flex;flex-direction:column;gap:8px}
 .brand h1{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.01em;margin:0;white-space:nowrap}
 .ballmark{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 0 18%,transparent 19%),var(--ball);box-shadow:inset -3px -3px 0 rgba(0,0,0,.12);flex:none}
 .who{margin-left:auto;min-width:0;display:flex;align-items:center;gap:6px}
-.who select{max-width:150px}
+.who .name{font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.auth{display:flex;flex-direction:column;gap:10px}
+.auth h2{margin-bottom:2px}
+.auth .fields{display:grid;grid-template-columns:minmax(0,1fr) 120px auto;gap:8px;align-items:end}
+.auth label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:500;min-width:0}
+.auth label>*{width:100%}
+.auth select,.auth input{height:42px}
+.auth .msg{min-height:1.2em;font-size:13px;color:var(--warn);margin:0}
+.sep{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--line)}
+.short{color:var(--warn);font-weight:600}
+@media (max-width:640px){.auth .fields{grid-template-columns:minmax(0,1fr) 96px}.auth .fields button{grid-column:1/-1}}
 .weekbar{display:flex;align-items:center;gap:8px}
 .weekbar button{width:40px;height:36px;padding:0;font-size:18px;flex:none}
 .wlabel{flex:1;text-align:center;line-height:1.15}
@@ -169,8 +180,8 @@ a.join{display:inline-block;background:var(--accent);color:var(--accent-ink);tex
       <span class="ballmark" aria-hidden="true"></span>
       <h1>Kiedy gramy?</h1>
       <div class="who">
-        <label for="me" class="hint">Jestem</label>
-        <select id="me"><option value="">— wybierz —</option></select>
+        <span class="name" id="meName"></span>
+        <button class="ghost" id="logout" hidden>Wyloguj</button>
       </div>
     </div>
     <div class="weekbar">
@@ -200,13 +211,24 @@ a.join{display:inline-block;background:var(--accent);color:var(--accent-ink);tex
 
   <!-- 1. moje godziny -->
   <section class="panel" id="p-avail">
-    <div class="card" id="joinBox">
-      <h2>Kim jesteś?</h2>
-      <p class="hint" style="margin:6px 0 10px">Wybierz siebie z listy u góry albo dodaj się, jeśli jesteś tu pierwszy raz.</p>
-      <div class="row">
-        <input type="text" id="newName" placeholder="Twoje imię" maxlength="24" aria-label="Twoje imię" style="flex:1">
-        <button id="addPlayer" class="primary">Dodaj mnie</button>
+    <div class="card auth" id="joinBox">
+      <div>
+        <h2>Zaloguj się</h2>
+        <p class="hint">Wybierz siebie i wpisz swój PIN. Jeśli logujesz się pierwszy raz po wprowadzeniu PIN-ów, wpisany PIN zostanie ustawiony jako Twój.</p>
       </div>
+      <div class="fields">
+        <label>Kim jesteś<select id="loginWho"><option value="">— wybierz —</option></select></label>
+        <label>PIN<input type="password" id="loginPin" inputmode="numeric" autocomplete="current-password" maxlength="8" placeholder="4–8 cyfr"></label>
+        <button id="loginBtn" class="primary">Zaloguj</button>
+      </div>
+      <p class="msg" id="loginMsg" role="status"></p>
+      <div class="sep">pierwszy raz tutaj</div>
+      <div class="fields">
+        <label>Twoje imię<input type="text" id="newName" maxlength="24" autocomplete="nickname" placeholder="np. Ola"></label>
+        <label>Wymyśl PIN<input type="password" id="newPin" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="4–8 cyfr"></label>
+        <button id="addPlayer">Dodaj mnie</button>
+      </div>
+      <p class="msg" id="newMsg" role="status"></p>
     </div>
     <div id="availBody" hidden>
       <div class="row between">
@@ -245,11 +267,11 @@ a.join{display:inline-block;background:var(--accent);color:var(--accent-ink);tex
   <section class="panel" id="p-games" hidden>
     <details class="fbox" id="fbox"><summary>Filtry <span class="hint" id="fcount"></span></summary>
       <div class="filters">
-        <label>Min. wolnych z nas<input type="number" id="fMin" min="1" max="20" value="6" inputmode="numeric"></label>
+        <label>Ilu z nas chce grać<input type="number" id="fMin" min="1" max="20" value="6" inputmode="numeric"></label>
         <label>Pokaż<select id="fOnly"><option value="match">tylko pasujące nam</option><option value="all">wszystkie terminy</option></select></label>
         <label>Kolejność<select id="fSort"><option value="best">najwięcej z nas wolnych</option><option value="time">po dacie i godzinie</option></select></label>
         <label>Maks. cena (zł)<input type="number" id="fPrice" min="0" step="1" placeholder="dowolna" inputmode="numeric"></label>
-        <label>Miejsca na PNH<select id="fSpots"><option value="free" selected>są wolne miejsca</option><option value="any">pokaż też pełne</option><option value="fit">zmieścimy się wszyscy wolni</option></select></label>
+        <label>Miejsca na PNH<select id="fSpots"><option value="need" selected>jest miejsce dla tylu z nas</option><option value="free">jakiekolwiek wolne miejsce</option><option value="any">pokaż też pełne</option></select></label>
         <label>Płeć<select id="fGender"><option value="">dowolna</option><option>Mieszane</option><option>Mężczyźni</option><option>Kobiety</option></select></label>
         <label>Trener<select id="fCoach"><option value="">wszystkie</option><option value="no">bez trenera (gra)</option><option value="yes">z trenerem</option></select></label>
         <label>Szukaj miejsca<input type="text" id="fPlace" placeholder="np. Hoża"></label>
@@ -303,11 +325,11 @@ const slug=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/�
 const shortDate=s=>{const d=parse(s);return DAYS[dow(s)]+" "+d.getDate()+"."+pad(d.getMonth()+1)};
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 
-const S={players:{},pnh:[],pnhSynced:0,games:[],me:store.get("siatka.me")||null,db:null,
+const S={players:{},pnh:[],pnhSynced:0,games:[],me:store.get("siatka.me")||null,pin:store.get("siatka.pin")||"",authed:false,db:null,
   tab:"avail",week:0,day:"",win:null,sel:null,levels:new Set(),shown:40};
 let dirty=0,saveTimer=null;
 
-try{const f=JSON.parse(store.get("siatka.filters")||"{}");
+try{const v2=store.get("siatka.filters.v2"),f=JSON.parse(v2||store.get("siatka.filters")||"{}");if(!v2)delete f.fSpots;
   ["fMin","fPrice","fSpots","fGender","fCoach","fOnly","fSort"].forEach(id=>{if(f[id]!=null&&f[id]!=="")$(id).value=f[id]});
   (f.levels||[]).forEach(l=>{if(LEVELS.includes(l))S.levels.add(l)});}catch(e){}
 
@@ -315,7 +337,7 @@ function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTime
 function today(){return iso(new Date())}
 function weekDates(w){const m=addDays(monday(new Date()),7*(w==null?S.week:w));return Array.from({length:7},(_,i)=>iso(addDays(m,i)))}
 function playerList(){return Object.entries(S.players).map(([id,p])=>({id,...p})).sort((a,b)=>a.name.localeCompare(b.name,"pl"))}
-function me(){return S.me&&S.players[S.me]?S.players[S.me]:null}
+function me(){return S.authed&&S.me&&S.players[S.me]?S.players[S.me]:null}
 function isFree(p,date,h){const a=p.days[date];return !!a&&a.indexOf(h)>=0}
 function hasWeek(p,dates){return dates.some(d=>p.days[d]&&p.days[d].length)}
 
@@ -332,24 +354,47 @@ function renderWeek(){const d=weekDates(),a=parse(d[0]),b=parse(d[6]);
   $("wRel").textContent=REL[S.week];$("wPrev").disabled=S.week===0;$("wNext").disabled=S.week===MAXW}
 
 /* ---------- kto ---------- */
-$("me").addEventListener("change",e=>{S.me=e.target.value||null;store.set("siatka.me",S.me||"");dirty=0;render()});
+const PIN_RE=/^[0-9]{4,8}$/;
+const AUTH_MSG={bad:"Zły PIN. Spróbuj jeszcze raz.",locked:"Za dużo prób. Konto jest zablokowane na 15 minut.",bad_pin:"PIN musi mieć od 4 do 8 cyfr.",
+  no_player:"Nie ma takiej osoby. Odśwież stronę.",taken:"Ta osoba już jest na liście. Zaloguj się powyżej.",bad_input:"Imię może mieć do 24 znaków.",
+  too_many:"Lista jest pełna.",no_fn:"Baza nie ma jeszcze funkcji logowania. Organizator musi uruchomić nowy SQL w Supabase.",unavailable:"Nie mogę połączyć się z bazą. Spróbuj ponownie."};
+function setSession(id,pin){S.me=id;S.pin=pin;S.authed=!!id;store.set("siatka.me",id||"");store.set("siatka.pin",pin||"");dirty=0;clearTimeout(saveTimer);saveTimer=null}
+function logout(msg){setSession(null,"");render();if(msg)toast(msg)}
+$("logout").addEventListener("click",()=>logout("Wylogowano"));
+$("loginBtn").addEventListener("click",login);
+$("loginPin").addEventListener("keydown",e=>{if(e.key==="Enter")login()});
+async function login(){
+  const id=$("loginWho").value,pin=$("loginPin").value.trim(),msg=$("loginMsg");
+  if(!id){msg.textContent="Wybierz siebie z listy.";return}
+  if(!PIN_RE.test(pin)){msg.textContent=AUTH_MSG.bad_pin;return}
+  if(!S.db){msg.textContent=AUTH_MSG.unavailable;return}
+  msg.textContent="Sprawdzam…";$("loginBtn").disabled=true;
+  try{const r=await S.db.login(id,pin);
+    if(r==="ok"||r==="created"){setSession(id,pin);$("loginPin").value="";msg.textContent="";render();
+      toast(r==="created"?"PIN ustawiony. Cześć, "+S.players[id].name+"!":"Cześć, "+S.players[id].name+"!")}
+    else msg.textContent=AUTH_MSG[r]||"Nie udało się zalogować."}
+  catch(e){msg.textContent=AUTH_MSG[e.code]||AUTH_MSG.unavailable}
+  finally{$("loginBtn").disabled=false}}
 $("addPlayer").addEventListener("click",addPlayer);
-$("newName").addEventListener("keydown",e=>{if(e.key==="Enter")addPlayer()});
+$("newPin").addEventListener("keydown",e=>{if(e.key==="Enter")addPlayer()});
 async function addPlayer(){
-  const name=$("newName").value.trim();if(!name){$("newName").focus();return}
-  if(!S.db){toast("Brak połączenia z bazą");return}
-  const existing=playerList().find(p=>p.name.toLowerCase()===name.toLowerCase());
-  let id=existing?existing.id:slug(name);
-  if(!existing){if(S.players[id])id+="-"+Math.random().toString(36).slice(2,5);
-    try{await S.db.doc("players/"+id).set({name,days:{},updated:Date.now()})}
-    catch(e){toast("Nie udało się zapisać. Spróbuj jeszcze raz.");return}
-    S.players[id]={name,days:{}}}
-  S.me=id;store.set("siatka.me",id);$("newName").value="";render();toast("Cześć, "+S.players[id].name+"!")}
+  const name=$("newName").value.trim(),pin=$("newPin").value.trim(),msg=$("newMsg");
+  if(!name){msg.textContent="Wpisz swoje imię.";$("newName").focus();return}
+  if(!PIN_RE.test(pin)){msg.textContent=AUTH_MSG.bad_pin;$("newPin").focus();return}
+  if(!S.db){msg.textContent=AUTH_MSG.unavailable;return}
+  if(playerList().some(p=>p.name.toLowerCase()===name.toLowerCase())){msg.textContent=AUTH_MSG.taken;return}
+  let id=slug(name);if(S.players[id])id+="-"+Math.random().toString(36).slice(2,5);
+  msg.textContent="Zapisuję…";$("addPlayer").disabled=true;
+  try{const r=await S.db.register(id,name,pin);
+    if(r==="ok"){S.players[id]={name,days:{}};setSession(id,pin);$("newName").value="";$("newPin").value="";msg.textContent="";render();toast("Cześć, "+name+"!")}
+    else msg.textContent=AUTH_MSG[r]||"Nie udało się dodać."}
+  catch(e){msg.textContent=AUTH_MSG[e.code]||AUTH_MSG.unavailable}
+  finally{$("addPlayer").disabled=false}}
 $("removeMe").addEventListener("click",async e=>{const b=e.currentTarget;if(!me()||!S.db)return;
   if(b.dataset.armed!=="1"){b.dataset.armed="1";b.textContent="Na pewno usunąć?";setTimeout(()=>{b.dataset.armed="";b.textContent="Usuń mnie"},3000);return}
   b.dataset.armed="";b.textContent="Usuń mnie";clearTimeout(saveTimer);saveTimer=null;dirty=0;
-  try{await S.db.doc("players/"+S.me).delete();delete S.players[S.me];S.me=null;store.set("siatka.me","");render();toast("Usunięto z listy")}
-  catch(err){toast("Nie udało się usunąć")}});
+  try{await S.db.doc("players/"+S.me).delete();delete S.players[S.me];logout("Usunięto z listy")}
+  catch(err){if(err.code==="bad"||err.code==="locked")logout("Sesja wygasła. Zaloguj się ponownie.");else toast("Nie udało się usunąć")}});
 
 /* ---------- siatka tygodnia ---------- */
 function buildGrid(el,heat){el.innerHTML="";el.appendChild(document.createElement("div"));
@@ -368,7 +413,8 @@ async function saveMine(){saveTimer=null;const p=me();if(!p||!S.db)return;const 
   const cutoff=iso(addDays(new Date(),-14)),days={};for(const k in p.days)if(k>=cutoff&&p.days[k].length)days[k]=p.days[k];
   try{await S.db.doc("players/"+id).set({name:p.name,days,updated:Date.now()});
     if(dirty===mark){dirty=0;$("saveState").textContent="Zapisane"}}
-  catch(e){$("saveState").textContent="Nie zapisano. Zmień coś, żeby spróbować ponownie."}}
+  catch(e){if(e.code==="bad"||e.code==="locked"){logout("PIN się nie zgadza. Zaloguj się ponownie.");return}
+    $("saveState").textContent="Nie zapisano. Zmień coś, żeby spróbować ponownie."}}
 function setCell(c,on){const date=weekDates()[+c.dataset.i],h=+c.dataset.h;if(date<today())return;
   edit(days=>{const a=new Set(days[date]||[]);on?a.add(h):a.delete(h);days[date]=[...a]});
   c.classList.toggle("on",on);c.setAttribute("aria-pressed",on)}
@@ -448,7 +494,7 @@ LEVELS.forEach(l=>{const b=document.createElement("button");b.type="button";b.cl
 $("gLevel").value="Średni";
 ["fMin","fPrice","fPlace","fSpots","fGender","fCoach","fOnly","fSort"].forEach(id=>$(id).addEventListener("input",()=>{S.shown=40;saveFilters();renderGames()}));
 $("moreBtn").addEventListener("click",()=>{S.shown+=40;renderGames()});
-function saveFilters(){const f={levels:[...S.levels]};["fMin","fPrice","fSpots","fGender","fCoach","fOnly","fSort"].forEach(id=>f[id]=$(id).value);store.set("siatka.filters",JSON.stringify(f))}
+function saveFilters(){const f={levels:[...S.levels]};["fMin","fPrice","fSpots","fGender","fCoach","fOnly","fSort"].forEach(id=>f[id]=$(id).value);store.set("siatka.filters.v2",JSON.stringify(f))}
 try{if(window.matchMedia("(min-width:641px)").matches)$("fbox").open=true}catch(e){}
 $("daybar").addEventListener("click",e=>{const b=e.target.closest("[data-day]");if(!b)return;S.day=b.dataset.day;S.win=null;S.shown=40;renderGames()});
 
@@ -456,11 +502,11 @@ function renderGames(){
   document.querySelectorAll("#levelChips .chip").forEach(b=>b.setAttribute("aria-pressed",S.levels.has(b.dataset.l)));
   const ps=playerList(),dates=weekDates(),inWeek=new Set(dates);
   const anyFilled=ps.some(p=>hasWeek(p,dates));
-  const minSet=Math.max(1,+$("fMin").value||1),min=Math.max(1,Math.min(minSet,ps.length||1));
+  const minSet=Math.max(1,+$("fMin").value||1),min=Math.max(1,Math.min(minSet,ps.length||1)),need=minSet;
   const maxP=$("fPrice").value===""?null:+$("fPrice").value,q=$("fPlace").value.trim().toLowerCase(),spots=$("fSpots").value;
   const gen=$("fGender").value,coach=$("fCoach").value,only=$("fOnly").value==="match"&&anyFilled&&!S.win,best=$("fSort").value==="best"&&anyFilled;
   const act=S.levels.size+(maxP!==null)+(!!q)+(spots!=="any")+(!!gen)+(!!coach);
-  $("fcount").textContent=`· min. ${min} z nas${act?` · inne: ${act}`:""}`;
+  $("fcount").textContent=`· ${need} z nas${spots==="need"?", tyle wolnych miejsc":""}${act-(spots!=="any")?` · inne: ${act-(spots!=="any")}`:""}`;
   const all=allGames();
   const base=all.filter(g=>inWeek.has(g.date)&&!isPast(g)&&toMin(g.start)!=null)
     .filter(g=>!S.levels.size||S.levels.has(g.level))
@@ -469,7 +515,7 @@ function renderGames(){
     .filter(g=>maxP===null||g.price==null||g.price<=maxP)
     .filter(g=>!q||(g.place||"").toLowerCase().includes(q))
     .map(g=>({g,f:gameFree(g,ps)}))
-    .filter(({g,f})=>{if(spots==="any"||g.total==null||g.taken==null)return true;const left=g.total-g.taken;return spots==="free"?left>0:left>=Math.max(1,f.yes.length)})
+    .filter(({g})=>{if(spots==="any"||g.total==null||g.taken==null)return true;const left=g.total-g.taken;return spots==="free"?left>0:left>=need})
     .filter(({f})=>!only||f.yes.length>=min);
   // dni
   const cnt={};base.forEach(({g})=>cnt[g.date]=(cnt[g.date]||0)+1);
@@ -488,14 +534,15 @@ function renderGames(){
   const box=$("games");
   if(!all.length){box.innerHTML=`<div class="empty">${S.db?"Wczytuję terminy z PNH…":"Brak połączenia z bazą."}</div>`;return}
   if(!list.length){const hasWeekData=all.some(g=>inWeek.has(g.date));
-    box.innerHTML=`<div class="empty">${!hasWeekData?"PNH nie ma jeszcze terminów na ten tydzień albo dane nie zostały odświeżone.":only?`Nie ma terminu, w którym wolnych jest co najmniej ${min} z was. Zmniejsz „Min. wolnych z nas” w filtrach albo przełącz na „wszystkie terminy”.`:"Żaden termin nie pasuje do filtrów."}</div>`;return}
-  box.innerHTML=list.slice(0,S.shown).map(({g,f})=>{const k=f.yes.length,cls=!anyFilled?"bad":k>=min?"good":k>=min-1&&k>0?"warn":"bad";
-    const d=parse(g.date),left=(g.total!=null&&g.taken!=null)?g.total-g.taken:null,link=/^https?:\/\//.test(g.url||"")?g.url:"";
+    box.innerHTML=`<div class="empty">${!hasWeekData?"PNH nie ma jeszcze terminów na ten tydzień albo dane nie zostały odświeżone.":spots==="need"&&!only?`Nie ma terminu z co najmniej ${need} wolnymi miejscami. Zmniejsz „Ilu z nas chce grać” albo zmień „Miejsca na PNH”.`:only?`Nie ma terminu, w którym wolnych jest co najmniej ${min} z was i jest ${need} miejsc. Zmniejsz „Ilu z nas chce grać” w filtrach albo przełącz na „wszystkie terminy”.`:"Żaden termin nie pasuje do filtrów."}</div>`;return}
+  box.innerHTML=list.slice(0,S.shown).map(({g,f})=>{const left=(g.total!=null&&g.taken!=null)?g.total-g.taken:null,k=f.yes.length;
+    const cls=!anyFilled?"bad":left!=null&&left<need?"bad":k>=min?"good":k>=min-1&&k>0?"warn":"bad";
+    const d=parse(g.date),link=/^https?:\/\//.test(g.url||"")?g.url:"";
     return `<article class="game ${cls}">
       <div class="date"><span>${DAYS[dow(g.date)]}</span><b>${d.getDate()}</b><span>${d.toLocaleDateString("pl-PL",{month:"short"}).replace(".","")}</span></div>
       <div class="gmain">
         <div class="gtitle"><span class="time">${esc(g.start)}${g.end?"–"+esc(g.end):""}</span> · ${esc(g.place||"miejsce nieznane")}</div>
-        <div class="meta">${g.level?`<span class="pill">${esc(g.level)}</span>`:""}${g.gender&&g.gender!=="Mieszane"?`<span class="pill">${esc(g.gender)}</span>`:""}${g.coach?`<span class="pill">z trenerem</span>`:""}${g.price!=null?`<span>${g.price===0?"darmowe":Number(g.price).toFixed(2).replace(".",",")+" zł"}</span>`:""}${left!=null?`<span>${left>0?`${left} wolnych miejsc (${g.taken}/${g.total})`:`brak miejsc (${g.taken}/${g.total})`}</span>`:""}</div>
+        <div class="meta">${g.level?`<span class="pill">${esc(g.level)}</span>`:""}${g.gender&&g.gender!=="Mieszane"?`<span class="pill">${esc(g.gender)}</span>`:""}${g.coach?`<span class="pill">z trenerem</span>`:""}${g.price!=null?`<span>${g.price===0?"darmowe":Number(g.price).toFixed(2).replace(".",",")+" zł"}</span>`:""}${left!=null?`<span${left<need?' class="short"':""}>${left<=0?`brak miejsc (${g.taken}/${g.total})`:left<need?`tylko ${left} ${left===1?"miejsce":left<5?"miejsca":"miejsc"} (${g.taken}/${g.total})`:`${left} wolnych miejsc (${g.taken}/${g.total})`}</span>`:""}</div>
         ${ps.length?`<div class="who-free"><b>Mogą:</b> ${esc(f.yes.join(", ")||"nikt")}${f.no.length?` <span class="no">· nie: ${esc(f.no.join(", "))}</span>`:""}</div>`:""}
       </div>
       <div class="side"><div class="badge">${k}/${ps.length}<small>z nas wolnych</small></div>${link?`<a class="join" href="${esc(link)}" target="_blank" rel="noopener">${g.pnhId?"Zapisz się na PNH":"Otwórz link"}</a>`:""}${g.pnhId?"":`<button class="ghost" data-del="${esc(g.id)}">Usuń</button>`}</div>
@@ -511,9 +558,10 @@ $("addGame").addEventListener("click",async()=>{if(!S.db){toast("Brak połączen
 
 /* ---------- render ---------- */
 function render(){
-  const ps=playerList(),sel=$("me");
+  const ps=playerList(),sel=$("loginWho"),keep=sel.value||(!S.authed&&S.me)||"",m=me();
   sel.innerHTML=`<option value="">— wybierz —</option>`+ps.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
-  sel.value=me()?S.me:"";
+  sel.value=S.players[keep]?keep:"";
+  $("meName").textContent=m?m.name:"";$("logout").hidden=!m;
   renderWeek();
   if(S.tab==="avail")renderAvail();else if(S.tab==="team")renderTeam();else renderGames()}
 render();
@@ -524,8 +572,10 @@ function makeDb(pw){
   const L={players:[],games:[],pnh:[]};let state={players:{},games:{}},pnhDocs={},last="",writes=0;
   async function rpc(fn,body){const h={"Content-Type":"application/json",apikey:CFG.key};if(CFG.key.startsWith("eyJ"))h.Authorization="Bearer "+CFG.key;
     const r=await fetch(CFG.url.replace(/\/+$/,"")+"/rest/v1/rpc/"+fn,{method:"POST",headers:h,body:JSON.stringify(body)});
-    if(!r.ok){let m="";try{m=(await r.json()).message||""}catch(e){}const err=new Error(m||("http_"+r.status));err.code=m==="bad_password"?"bad_password":"unavailable";throw err}
+    if(!r.ok){let j={};try{j=await r.json()}catch(e){}const m=j.message||"";const err=new Error(m||("http_"+r.status));
+      err.code=m==="bad_password"?"bad_password":(r.status===404||j.code==="PGRST202")?"no_fn":"unavailable";throw err}
     const t=await r.text();return t?JSON.parse(t):null}
+  async function write(fn,body){const res=await rpc(fn,body);if(res&&res!=="ok"){const e=new Error(res);e.code=res;throw e}}
   const snap=o=>{const docs=Object.entries(o).map(([id,v])=>({id,exists:true,data:()=>v}));return{docs,size:docs.length,empty:!docs.length}};
   const src=k=>k==="pnh"?pnhDocs:state[k];
   const emit=k=>L[k].forEach(f=>f(snap(src(k))));
@@ -536,11 +586,13 @@ function makeDb(pw){
     const next={};for(const d in (j.days||{}))next[d]={date:d,games:j.days[d],synced:j.synced};pnhDocs=next;emit("pnh")}catch(e){}}
   const tick=()=>{if(!document.hidden)pull().catch(()=>{})};
   return{pull,pullPnh,
+    login:(id,pin)=>rpc("siatka_login",{pw,p_id:id,p_pin:pin}),
+    async register(id,name,pin){writes++;try{const r=await rpc("siatka_register",{pw,p_id:id,p_name:name,p_pin:pin});if(r==="ok"){state.players={...state.players,[id]:{name,days:{},updated:0}};last="";emit("players")}return r}finally{writes++}},
     start(){setInterval(tick,15000);document.addEventListener("visibilitychange",tick);setInterval(pullPnh,30*60000)},
     collection(k){return{onSnapshot(cb){L[k].push(cb);cb(snap(src(k)));return()=>{}}}},
     doc(path){const [k,id]=path.split("/");return{
-      async set(v){writes++;try{await rpc("siatka_put",{pw,p_kind:k,p_id:id,p_data:v})}finally{writes++}state[k]={...state[k],[id]:v};last="";emit(k)},
-      async delete(){writes++;try{await rpc("siatka_del",{pw,p_kind:k,p_id:id})}finally{writes++}const c={...state[k]};delete c[id];state[k]=c;last="";emit(k)}}}}}
+      async set(v){writes++;try{await write("siatka_put",{pw,p_kind:k,p_id:id,p_data:v,p_pin:k==="players"?S.pin:null})}finally{writes++}state[k]={...state[k],[id]:v};last="";emit(k)},
+      async delete(){writes++;try{await write("siatka_del",{pw,p_kind:k,p_id:id,p_pin:k==="players"?S.pin:null})}finally{writes++}const c={...state[k]};delete c[id];state[k]=c;last="";emit(k)}}}}}
 async function connect(){
   if(!/^https:\/\//.test(CFG.url)||!CFG.key||CFG.key.startsWith("__"))return null;
   document.body.classList.add("locked");
@@ -562,6 +614,9 @@ function normPlayer(x){const days={};
   const db=await connect();
   if(!db){$("nodb").hidden=false;render();return}
   S.db=db;
+  if(S.me&&PIN_RE.test(S.pin)){try{const r=await db.login(S.me,S.pin);if(r==="ok"||r==="created")S.authed=true;else setSession(null,"")}
+    catch(e){if(e.code!=="unavailable")setSession(null,"")}}
+  else if(S.pin)setSession(null,"");
   db.collection("players").onSnapshot(snap=>{const next={};snap.docs.forEach(d=>{const x=d.data();if(x&&x.name)next[d.id]=normPlayer(x)});
       if(dirty&&S.me&&S.players[S.me])next[S.me]=S.players[S.me];          // nie nadpisuj niezapisanych zmian
       S.players=next;if(painting===null)render()},
